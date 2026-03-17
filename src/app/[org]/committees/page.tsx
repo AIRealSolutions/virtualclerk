@@ -13,7 +13,7 @@ export default async function CommitteesPage({
 
   const { data: organization } = await supabase
     .from("organizations")
-    .select("id, slug")
+    .select("*")
     .eq("slug", orgSlug)
     .single();
 
