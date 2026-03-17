@@ -136,7 +136,8 @@ export default async function CommitteeDetailPage({
         ) : (
           <ul className="divide-y divide-gray-100">
             {members.map((m) => {
-              const userInfo = m.users as { full_name: string | null; email: string } | null;
+              const usersRaw = m.users as unknown as { full_name: string | null; email: string }[] | { full_name: string | null; email: string } | null;
+              const userInfo = Array.isArray(usersRaw) ? (usersRaw[0] ?? null) : usersRaw;
               return (
                 <li key={m.id} className="flex items-center justify-between px-5 py-3.5">
                   <div>
