@@ -19,6 +19,7 @@ function getServiceClient() {
 }
 
 export async function POST(request: NextRequest) {
+  try {
   // Verify user is authenticated via cookie session
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -72,4 +73,8 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ slug: org.slug });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Unexpected error";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

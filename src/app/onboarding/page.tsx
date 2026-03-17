@@ -46,21 +46,27 @@ export default function OnboardingPage() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    const json = await res.json();
+      let json: { error?: string; slug?: string } = {};
+      try { json = await res.json(); } catch { /* empty response */ }
 
-    if (!res.ok) {
-      setError(json.error ?? "Something went wrong");
+      if (!res.ok) {
+        setError(json.error ?? `Server error (${res.status})`);
+        return;
+      }
+
+      router.push(`/${json.slug}/meetings`);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Network error — please try again");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push(`/${json.slug}/meetings`);
   }
 
   return (
