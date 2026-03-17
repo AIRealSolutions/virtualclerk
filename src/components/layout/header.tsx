@@ -14,10 +14,10 @@ interface HeaderProps {
 
 export default function Header({ user, org }: HeaderProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
 
   async function signOut() {
+    const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
   }
