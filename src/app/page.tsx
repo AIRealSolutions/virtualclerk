@@ -21,7 +21,7 @@ export default function HomePage() {
               Sign in
             </Link>
             <Link
-              href="/login"
+              href="/register"
               className="rounded-md bg-civic-blue px-4 py-2 text-sm font-medium text-white hover:bg-civic-navy"
             >
               Get started
@@ -47,7 +47,7 @@ export default function HomePage() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link
-              href="/login"
+              href="/register"
               className="inline-flex items-center gap-2 rounded-md bg-civic-blue px-6 py-3 font-medium text-white hover:bg-civic-navy"
             >
               Start free trial <ArrowRight className="h-4 w-4" />
