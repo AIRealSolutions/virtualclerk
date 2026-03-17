@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 const schema = z.object({
@@ -9,9 +10,17 @@ const schema = z.object({
   description: z.string().optional(),
 });
 
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+// Service role client bypasses RLS — only used after auth is confirmed
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
+export async function POST(request: NextRequest) {
+  // Verify user is authenticated via cookie session
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,8 +33,18 @@ export async function POST(request: NextRequest) {
   }
   const { name, slug, org_type, description } = parsed.data;
 
+  // Use service client for writes (avoids RLS session issues during onboarding)
+  const db = getServiceClient();
+
+  // Ensure user profile exists
+  await db.from("users").upsert({
+    id: user.id,
+    email: user.email!,
+    full_name: user.user_metadata?.full_name ?? null,
+  }, { onConflict: "id" });
+
   // Create organization
-  const { data: org, error: orgError } = await supabase
+  const { data: org, error: orgError } = await db
     .from("organizations")
     .insert({ name, slug, org_type, description: description || null })
     .select("id, slug")
@@ -39,7 +58,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Add creator as org_admin
-  const { error: memberError } = await supabase
+  const { error: memberError } = await db
     .from("organization_users")
     .insert({
       organization_id: org.id,
