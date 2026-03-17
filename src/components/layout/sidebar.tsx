@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   Calendar,
+  CalendarDays,
   CheckSquare,
   FileText,
   Home,
@@ -27,6 +28,7 @@ export default function Sidebar({ org }: SidebarProps) {
   const navItems = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: `${base}/meetings`, icon: Calendar, label: "Meetings" },
+    { href: `${base}/calendar`, icon: CalendarDays, label: "Calendar" },
     { href: `${base}/committees`, icon: Users, label: "Committees" },
     { href: `${base}/documents`, icon: FileText, label: "Documents" },
     { href: `${base}/tasks`, icon: CheckSquare, label: "Tasks" },
