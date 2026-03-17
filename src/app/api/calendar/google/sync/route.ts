@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { getOrgSettings, resolveGoogleClientId, resolveGoogleClientSecret } from "@/lib/org-settings";
 
-async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+async function refreshAccessToken(refreshToken: string, clientId: string, clientSecret: string): Promise<string | null> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
@@ -48,11 +49,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${orgSlug}/calendar?error=not_connected`, request.url));
   }
 
+  // Resolve org-specific Google keys for token refresh
+  const orgSettings = await getOrgSettings(org.id);
+  const clientId = resolveGoogleClientId(orgSettings.google_client_id);
+  const clientSecret = resolveGoogleClientSecret(orgSettings.google_client_secret);
+
   // Refresh token if expired
   let accessToken = (gcal as any).access_token as string;
   const expiry = (gcal as any).token_expiry ? new Date((gcal as any).token_expiry) : null;
   if (expiry && expiry <= new Date() && (gcal as any).refresh_token) {
-    const newToken = await refreshAccessToken((gcal as any).refresh_token);
+    const newToken = await refreshAccessToken((gcal as any).refresh_token, clientId, clientSecret);
     if (newToken) {
       accessToken = newToken;
       await db

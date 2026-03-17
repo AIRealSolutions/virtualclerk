@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { getOrgSettings, resolveGoogleClientId } from "@/lib/org-settings";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
@@ -14,11 +16,26 @@ export async function GET(request: NextRequest) {
   const orgSlug = request.nextUrl.searchParams.get("orgSlug");
   if (!orgSlug) return NextResponse.json({ error: "orgSlug required" }, { status: 400 });
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  // Resolve org
+  const db = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data: org } = await db
+    .from("organizations")
+    .select("id")
+    .eq("slug", orgSlug)
+    .single();
+
+  if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+
+  // Use org-specific key if available, fall back to platform key
+  const orgSettings = await getOrgSettings(org.id);
+  const clientId = resolveGoogleClientId(orgSettings.google_client_id);
+
   if (!clientId) {
-    return NextResponse.json(
-      { error: "Google Calendar is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables." },
-      { status: 503 }
+    return NextResponse.redirect(
+      new URL(`/${orgSlug}/settings?error=google_not_configured`, request.url)
     );
   }
 

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 import { z } from "zod";
+import { getOrgSettings, resolveOpenAIKey } from "@/lib/org-settings";
 
-function getOpenAI() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI(apiKey?: string) {
+  return new OpenAI({ apiKey: apiKey ?? process.env.OPENAI_API_KEY });
 }
 
 const schema = z.object({
@@ -39,8 +40,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
+  const orgId = (doc.organizations as unknown as { id: string } | null)?.id ?? doc.organization_id;
+  const orgSettings = orgId ? await getOrgSettings(orgId) : null;
+  const openaiKey = resolveOpenAIKey(orgSettings?.openai_api_key ?? null);
+
   try {
-    const response = await getOpenAI().responses.create({
+    const response = await getOpenAI(openaiKey).responses.create({
       model: "gpt-4o",
       instructions:
         "You are a government document analyst. Summarize the provided document in 2-3 concise paragraphs. Focus on key points, decisions, and any action items. Keep language neutral and factual.",

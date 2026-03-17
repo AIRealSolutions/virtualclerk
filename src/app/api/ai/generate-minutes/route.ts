@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 import { z } from "zod";
+import { getOrgSettings, resolveOpenAIKey } from "@/lib/org-settings";
 
-function getOpenAI() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI(apiKey?: string) {
+  return new OpenAI({ apiKey: apiKey ?? process.env.OPENAI_API_KEY });
 }
 
 const schema = z.object({
@@ -115,8 +116,11 @@ ${motionsText || "No motions recorded."}
 
 Please generate complete, professional meeting minutes.`;
 
+  const orgSettings = await getOrgSettings(org.id);
+  const openaiKey = resolveOpenAIKey(orgSettings.openai_api_key);
+
   try {
-    const response = await getOpenAI().responses.create({
+    const response = await getOpenAI(openaiKey).responses.create({
       model: "gpt-4o",
       instructions: systemPrompt,
       input: userPrompt,
