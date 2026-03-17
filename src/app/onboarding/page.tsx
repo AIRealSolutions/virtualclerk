@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Building2, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 const schema = z.object({
@@ -46,46 +45,22 @@ export default function OnboardingPage() {
   async function onSubmit(data: OnboardingForm) {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/login"); return; }
+    const res = await fetch("/api/onboarding", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
 
-    // Create organization
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .insert({
-        name: data.name,
-        slug: data.slug,
-        org_type: data.org_type,
-        description: data.description || null,
-      })
-      .select("id, slug")
-      .single();
+    const json = await res.json();
 
-    if (orgError) {
-      setError(orgError.message.includes("duplicate") ? "That URL slug is already taken — try another." : orgError.message);
+    if (!res.ok) {
+      setError(json.error ?? "Something went wrong");
       setLoading(false);
       return;
     }
 
-    // Add user as org_admin
-    const { error: memberError } = await supabase
-      .from("organization_users")
-      .insert({
-        organization_id: org.id,
-        user_id: user.id,
-        role: "org_admin",
-        is_active: true,
-      });
-
-    if (memberError) {
-      setError(memberError.message);
-      setLoading(false);
-      return;
-    }
-
-    router.push(`/${org.slug}/meetings`);
+    router.push(`/${json.slug}/meetings`);
   }
 
   return (
