@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 import { z } from "zod";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 const schema = z.object({
   documentId: z.string().uuid(),
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const response = await client.responses.create({
+    const response = await getOpenAI().responses.create({
       model: "gpt-4o",
       instructions:
         "You are a government document analyst. Summarize the provided document in 2-3 concise paragraphs. Focus on key points, decisions, and any action items. Keep language neutral and factual.",

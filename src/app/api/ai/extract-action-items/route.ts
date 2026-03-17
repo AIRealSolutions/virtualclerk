@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 import { z } from "zod";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 const schema = z.object({
   meetingId: z.string().uuid(),
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const response = await client.responses.create({
+    const response = await getOpenAI().responses.create({
       model: "gpt-4o",
       instructions: `You are a professional clerk assistant extracting action items from meeting notes.
 Extract all action items and return them as a JSON array with this structure:

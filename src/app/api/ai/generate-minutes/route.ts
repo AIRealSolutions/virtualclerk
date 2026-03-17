@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 import { z } from "zod";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 const schema = z.object({
   meetingId: z.string().uuid(),
@@ -114,7 +116,7 @@ ${motionsText || "No motions recorded."}
 Please generate complete, professional meeting minutes.`;
 
   try {
-    const response = await client.responses.create({
+    const response = await getOpenAI().responses.create({
       model: "gpt-4o",
       instructions: systemPrompt,
       input: userPrompt,
