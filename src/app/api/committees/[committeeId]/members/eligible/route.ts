@@ -47,7 +47,8 @@ export async function GET(
     const eligible = (orgMembers ?? [])
       .filter((m) => !existingIds.has(m.user_id))
       .map((m) => {
-        const u = m.users as { full_name: string | null; email: string } | null;
+        const usersRaw = m.users as unknown as { full_name: string | null; email: string }[] | { full_name: string | null; email: string } | null;
+        const u = Array.isArray(usersRaw) ? (usersRaw[0] ?? null) : usersRaw;
         return {
           user_id: m.user_id,
           full_name: u?.full_name ?? null,
