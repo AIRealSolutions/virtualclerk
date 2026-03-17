@@ -25,6 +25,9 @@ export default async function DashboardLayout({
 
   const currentOrg = memberships?.[0]?.organizations ?? null;
 
+  // No org yet — send to onboarding
+  if (!currentOrg) redirect("/onboarding");
+
   return (
     <div className="flex h-screen overflow-hidden bg-civic-slate">
       <Sidebar org={currentOrg} />

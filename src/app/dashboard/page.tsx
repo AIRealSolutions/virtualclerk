@@ -9,7 +9,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { format } from "@/lib/utils";
+
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -29,6 +29,7 @@ export default async function DashboardPage() {
     .single();
 
   if (!membership) redirect("/onboarding");
+
 
   const org = membership.organizations!;
   const orgSlug = org.slug;
