@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,9 +9,12 @@ import {
   Clock,
   Plus,
   FileText,
-  CheckSquare,
-  GripVertical,
   Sparkles,
+  UserPlus,
+  CheckCircle2,
+  HelpCircle,
+  XCircle,
+  Clock3,
 } from "lucide-react";
 import AgendaItemCard from "@/components/meetings/agenda-item-card";
 import GenerateMinutesButton from "@/components/meetings/generate-minutes-button";
@@ -31,7 +35,12 @@ export default async function MeetingDetailPage({
 
   if (!meeting) notFound();
 
-  const [agendaRes, documentsRes, motionsRes, minutesRes] = await Promise.all([
+  const db = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const [agendaRes, documentsRes, motionsRes, minutesRes, invitationsRes] = await Promise.all([
     supabase
       .from("agenda_items")
       .select("*")
@@ -46,12 +55,17 @@ export default async function MeetingDetailPage({
       .select("*, votes(*)")
       .eq("meeting_id", meetingId),
     supabase.from("minutes").select("*").eq("meeting_id", meetingId).single(),
+    db.from("meeting_invitations")
+      .select("id, email, name, status, note, responded_at")
+      .eq("meeting_id", meetingId)
+      .order("created_at"),
   ]);
 
   const agendaItems = agendaRes.data ?? [];
   const documents = documentsRes.data ?? [];
   const motions = motionsRes.data ?? [];
   const minutes = minutesRes.data ?? null;
+  const invitations = invitationsRes.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -189,6 +203,55 @@ export default async function MeetingDetailPage({
         )}
       </section>
 
+      {/* Attendees */}
+      <section className="rounded-lg border border-gray-200 bg-white">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-civic-navy">Attendees</h2>
+            {invitations.length > 0 && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                {invitations.filter((i) => i.status === "accepted").length}/{invitations.length} accepted
+              </span>
+            )}
+          </div>
+          <Link
+            href={`/${orgSlug}/meetings/${meetingId}/invite`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Invite
+          </Link>
+        </div>
+        {invitations.length === 0 ? (
+          <div className="py-8 text-center text-sm text-gray-400">
+            No invitations sent yet —{" "}
+            <Link href={`/${orgSlug}/meetings/${meetingId}/invite`} className="text-civic-blue hover:underline">
+              invite attendees
+            </Link>
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {invitations.map((inv) => (
+              <li key={inv.id} className="flex items-center gap-3 px-5 py-3">
+                <RSVPIcon status={inv.status} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-gray-800">
+                    {inv.name ?? inv.email}
+                  </p>
+                  {inv.name && (
+                    <p className="truncate text-xs text-gray-400">{inv.email}</p>
+                  )}
+                  {inv.note && inv.note.includes("[Alternative time suggested]") && (
+                    <p className="mt-0.5 text-xs text-amber-600 font-medium">Suggested alternative time</p>
+                  )}
+                </div>
+                <RSVPBadge status={inv.status} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* Minutes */}
       <section className="rounded-lg border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b px-5 py-4">
@@ -232,6 +295,30 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`rounded-full px-3 py-1 text-sm font-medium ${map[status] ?? map.draft}`}>
+      {labels[status] ?? status}
+    </span>
+  );
+}
+
+function RSVPIcon({ status }: { status: string }) {
+  if (status === "accepted")  return <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />;
+  if (status === "declined")  return <XCircle className="h-4 w-4 shrink-0 text-red-400" />;
+  if (status === "tentative") return <HelpCircle className="h-4 w-4 shrink-0 text-amber-500" />;
+  return <Clock3 className="h-4 w-4 shrink-0 text-gray-300" />;
+}
+
+function RSVPBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    accepted:  "bg-green-50 text-green-700",
+    declined:  "bg-red-50 text-red-600",
+    tentative: "bg-amber-50 text-amber-700",
+    pending:   "bg-gray-100 text-gray-500",
+  };
+  const labels: Record<string, string> = {
+    accepted: "Accepted", declined: "Declined", tentative: "Maybe", pending: "Pending",
+  };
+  return (
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${map[status] ?? map.pending}`}>
       {labels[status] ?? status}
     </span>
   );
